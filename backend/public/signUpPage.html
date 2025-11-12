@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo - Sign Up</title>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: grid;
+            place-items: center;
+            min-height: 90vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem 3rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            box-sizing: border-box; 
+        }
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            background-color: #007bff;
+            margin-bottom: 1rem;
+        }
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #8a8d91;
+            margin: 1rem 0;
+        }
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #dddfe2;
+        }
+        .separator:not(:empty)::before {
+            margin-right: .25em;
+        }
+        .separator:not(:empty)::after {
+            margin-left: .25em;
+        }
+        #message {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .g_id_signin {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Create Account</h2>
+
+        <form id="signup-form">
+            <div class="form-group">
+                <label for="fullName">Full Name</label>
+                <input type="text" id="fullName" name="fullName" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn">Sign Up with Email</button>
+        </form>
+
+        <div class="separator">OR</div>
+
+        <div id="g_id_onload"
+             data-client_id="540064191961-qjkofnpacbka9hun24mobf9fm8u1jrka.apps.googleusercontent.com" 
+             data-callback="handleCredentialResponse"
+             data-context="signup">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-theme="outline"
+             data-text="signup_with"
+             data-size="large"
+             data-logo_alignment="left">
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const messageDiv = document.getElementById('message');
+        const signupForm = document.getElementById('signup-form');
+
+        // --- HANDLER 1: Google OAuth ---
+        async function handleCredentialResponse(response) {
+            const googleToken = response.credential;
+            messageDiv.textContent = 'Verifying with Google...';
+            messageDiv.className = '';
+
+            try {
+                const res = await fetch('http://localhost:5000/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: googleToken }),
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+
+                messageDiv.textContent = `Success: ${data.message} | Your app token is: ${data.appToken.substring(0, 20)}...`;
+                messageDiv.className = 'success';
+
+            } catch (error) {
+                messageDiv.textContent = error.message;
+                messageDiv.className = 'error';
+            }
+        }
+
+        // --- HANDLER 2: Manual Signup Form ---
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            messageDiv.textContent = 'Sending...';
+            messageDiv.className = '';
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const res = await fetch('http://localhost:5000/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.message);
+
+                messageDiv.textContent = result.message;
+                messageDiv.className = 'success';
+                signupForm.reset();
+
+            } catch (error) {
+                messageDiv.textContent = error.message;
+                messageDiv.className = 'error';
+            }
+        });
+    </script>
+
+</body>
+</html>
